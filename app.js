@@ -111,7 +111,7 @@ let notify = async(person , slotDetails)=>{
 let checkSlots = async(person,date)=>{
    try{
     
-    for(i = 0 ; i < person.districts.length ; i++ ) {
+    for(let i = 0 ; i < person.districts.length ; i++ ) {
        let config = {
           method: 'get',
           url: 'https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id='+person.districts[i]+'&date='+date,
@@ -124,14 +124,15 @@ let checkSlots = async(person,date)=>{
 
        response = await axios(config)
        let sessions = response.data.sessions;
-       let validSlots = sessions.filter(slot => slot.min_age_limit <= person.age &&  slot.available_capacity > 0)
-       console.log({date:date, validSlots: validSlots.length})
+       // console.log(sessions);
+       let validSlots = sessions.filter(slot => slot.min_age_limit === person.age &&  slot.available_capacity > 0)
+       console.log({date:date, validSlots: validSlots.length, person: person.email});
        if(validSlots.length > 0) {
-                  await notify(person,validSlots);
+                  notify(person,validSlots);
        }       
      }  
    }catch(error){
-       console.log(error)
+       console.log('error response', error);
        throw error
    }
 }
@@ -148,11 +149,17 @@ let fetchNext10Days = async()=>{
     return dates;
 }
 
-let checkAvailability = async(person)=>{
-    let datesArray = await fetchNext10Days();
-    datesArray.forEach(async(date) => {
-        await checkSlots(person,date)
+let checkAvailability = async(persons, dates)=>{
+    console.log(dates);
+    dates.forEach(async(date) => {
+        for(let i = 0; i < persons.length; i++) {
+            checkSlots(persons[i],date);
+        }
     })
+    // let dateString = moment().format('DD-MM-YYYY')
+    // for(let i = 0; i < persons.length; i++) {
+    //     checkSlots(persons[i],dateString);
+    // }
 }
 
 
@@ -160,15 +167,27 @@ let checkAvailability = async(person)=>{
 
 let main = async()=>{
     try {
-
-        let person = {
-          districts : [650,145,651],
-          email : process.env.PERSON, // email of the person
-          age : 45 //minimum tracking age
-        }
-
+        console.log('running app');
+        let persons = [{
+            districts : [496],
+            email : "akashbhat00@gmail.com", // email of the person
+            age : 18 //minimum tracking age
+        }, {
+            districts : [230],
+            email : ["nehalbhat97@gmail.com", "vspandita@gmail.com"], // email of the person
+            age : 18 //minimum tracking age
+        }, 
+        // {
+        //     districts : [230],
+        //     email : "vspandita@gmail.com", // email of the person
+        //     age : 18 //minimum tracking age
+        // }
+    ];
+        let datesArray = await fetchNext10Days();
        cron.schedule('*/1 * * * *', async () => {
-             checkAvailability(person)
+           console.log(persons);
+           console.log(datesArray);
+            checkAvailability(persons, datesArray);
        });
     } catch (error) {
         console.log('an error occured: ' + JSON.stringify(e, null, 2));
